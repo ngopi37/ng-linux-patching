@@ -1,0 +1,41 @@
+---
+- hosts: test2
+  become: true
+  vars:
+    exclude_parameters: ["Kernel*",""]
+  tasks:
+  - name: Run a Pre check befor system upgrade
+    include: pre_tasks.yml
+
+  - name: update the system
+    apt:
+      name: "*"
+      state: latest
+      exclude: "{{ exclude_parameters }}"
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: update the system
+    yum:
+      name: "*"
+      state: latest
+      exclude: "{{ exclude_parameters }}"
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  - name: restart system to reboot to newest kernel
+    shell: "sleep 5 && reboot"
+    async: 1
+    poll: 0
+
+  - name: wait for 10 seconds
+    pause:
+      seconds: 10
+
+  - name: wait for the system to reboot
+    wait_for_connection:
+      connect_timeout: 20
+      sleep: 5
+      delay: 5
+      timeout: 60
+
+  - name: Run a Pre check befor system upgrade
+    include: post_tasks.yml
